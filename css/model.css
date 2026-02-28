@@ -1,0 +1,267 @@
+/* ============================================================
+   ML Zoo — Deep-Dive Model Page Styles
+   Import this in each spoke repo's model index.html
+   ============================================================ */
+
+/* ---------- Page layout ---------- */
+.model-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--text-primary, #e6edf3);
+    background: var(--bg-primary, #0d1117);
+    min-height: 100vh;
+}
+
+/* ---------- Nav bar ---------- */
+.model-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border-default, #30363d);
+    margin-bottom: 24px;
+}
+
+.model-nav__back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-link, #58a6ff);
+    text-decoration: none;
+    font-size: .85rem;
+}
+.model-nav__back:hover { text-decoration: underline; }
+.model-nav__back svg { width: 16px; height: 16px; }
+
+/* ---------- Hero section ---------- */
+.model-hero {
+    text-align: center;
+    margin-bottom: 32px;
+}
+.model-hero__title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.model-hero__meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.model-hero__badge {
+    font-size: .7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+.model-hero__year {
+    font-size: .8rem;
+    color: var(--text-muted, #6e7681);
+}
+.model-hero__desc {
+    font-size: 1rem;
+    color: var(--text-secondary, #8b949e);
+    max-width: 640px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* ---------- Diagram container ---------- */
+.model-diagram {
+    background: var(--bg-secondary, #161b22);
+    border: 1px solid var(--border-default, #30363d);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 32px;
+    position: relative;
+    min-height: 350px;
+}
+.model-diagram__controls {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 6px;
+}
+.model-diagram__btn {
+    font-size: .72rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-default, #30363d);
+    background: var(--bg-card, #1c2128);
+    color: var(--text-secondary, #8b949e);
+    cursor: pointer;
+}
+.model-diagram__btn:hover {
+    color: var(--text-primary, #e6edf3);
+    border-color: var(--text-muted, #6e7681);
+}
+
+/* ---------- Tabs ---------- */
+.model-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border-default, #30363d);
+    margin-bottom: 24px;
+    overflow-x: auto;
+}
+.model-tab-btn {
+    padding: 10px 18px;
+    font-size: .85rem;
+    font-weight: 500;
+    color: var(--text-muted, #6e7681);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color .2s, border-color .2s;
+}
+.model-tab-btn:hover { color: var(--text-primary, #e6edf3); }
+.model-tab-btn--active {
+    color: var(--text-primary, #e6edf3);
+    border-bottom-color: var(--text-link, #58a6ff);
+}
+
+.model-tab-content { display: none; }
+.model-tab-content--active { display: block; }
+
+/* ---------- Content sections ---------- */
+.model-section { margin-bottom: 28px; }
+.model-section h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary, #e6edf3);
+}
+.model-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-secondary, #8b949e);
+}
+.model-section p {
+    color: var(--text-secondary, #8b949e);
+    line-height: 1.7;
+    margin-bottom: 12px;
+}
+.model-section ul {
+    color: var(--text-secondary, #8b949e);
+    padding-left: 20px;
+    margin-bottom: 12px;
+}
+.model-section li { margin-bottom: 4px; }
+
+/* ---------- Pros / Cons ---------- */
+.model-proscons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.model-pros, .model-cons {
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-default, #30363d);
+}
+.model-pros { background: rgba(63,185,80,.06); }
+.model-cons { background: rgba(248,81,73,.06); }
+.model-pros h4 { color: #3fb950; margin-bottom: 8px; }
+.model-cons h4 { color: #f85149; margin-bottom: 8px; }
+
+/* ---------- Code blocks ---------- */
+.model-code {
+    background: var(--bg-secondary, #161b22);
+    border: 1px solid var(--border-default, #30363d);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+}
+.model-code pre {
+    margin: 0;
+    font-size: .82rem;
+    line-height: 1.5;
+    color: var(--text-primary, #e6edf3);
+}
+.model-code__label {
+    font-size: .7rem;
+    color: var(--text-muted, #6e7681);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+/* ---------- Math (KaTeX) ---------- */
+.model-math {
+    background: var(--bg-secondary, #161b22);
+    border: 1px solid var(--border-default, #30363d);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+}
+.model-math__label {
+    font-size: .75rem;
+    color: var(--text-muted, #6e7681);
+    margin-bottom: 10px;
+}
+
+/* ---------- Related models ---------- */
+.model-related {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.model-related__link {
+    display: inline-block;
+    padding: 6px 14px;
+    border: 1px solid var(--border-default, #30363d);
+    border-radius: 8px;
+    color: var(--text-link, #58a6ff);
+    text-decoration: none;
+    font-size: .82rem;
+    transition: border-color .2s, background .2s;
+}
+.model-related__link:hover {
+    border-color: var(--text-link, #58a6ff);
+    background: rgba(88,166,255,.08);
+    text-decoration: none;
+}
+
+/* ---------- Slider controls ---------- */
+.model-slider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.model-slider__label {
+    font-size: .82rem;
+    color: var(--text-secondary, #8b949e);
+    min-width: 100px;
+}
+.model-slider__input {
+    flex: 1;
+    max-width: 300px;
+    accent-color: var(--text-link, #58a6ff);
+}
+.model-slider__value {
+    font-size: .82rem;
+    color: var(--text-primary, #e6edf3);
+    font-family: monospace;
+    min-width: 50px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+    .model-hero__title { font-size: 1.3rem; }
+    .model-proscons { grid-template-columns: 1fr; }
+    .model-tab-btn { padding: 8px 12px; font-size: .78rem; }
+}

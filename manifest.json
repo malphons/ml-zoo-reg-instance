@@ -1,0 +1,40 @@
+{
+    "schema_version": "1.0",
+    "repo_id": "ml-zoo-reg-instance",
+    "task": "regression",
+    "subcategory": "instance",
+    "label": "Instance-Based Regression",
+    "color_accent": "#f778ba",
+    "models": [
+        {
+            "id": "knn-reg",
+            "name": "k-Nearest Neighbors Regressor",
+            "short_description": "Predicts by averaging the target values of the k closest training samples in feature space.",
+            "task": "regression",
+            "subcategory": "instance",
+            "tags": ["lazy-learning", "non-parametric", "distance-based", "local"],
+            "year_introduced": 1951,
+            "key_paper": "Fix & Hodges (1951); Cover & Hart (1967)",
+            "complexity": "beginner",
+            "color_accent": "#f778ba",
+            "use_cases": ["imputation", "local patterns", "recommendation systems"],
+            "sklearn_class": "sklearn.neighbors.KNeighborsRegressor",
+            "related_models": ["radius-reg", "knn-cls", "gp-reg"]
+        },
+        {
+            "id": "radius-reg",
+            "name": "Radius Neighbors Regressor",
+            "short_description": "Averages target values of all training samples within a fixed radius of the query point.",
+            "task": "regression",
+            "subcategory": "instance",
+            "tags": ["lazy-learning", "non-parametric", "radius-based", "local"],
+            "year_introduced": 1951,
+            "key_paper": "Fix & Hodges (1951)",
+            "complexity": "beginner",
+            "color_accent": "#f778ba",
+            "use_cases": ["variable density data", "spatial data", "anomaly-aware prediction"],
+            "sklearn_class": "sklearn.neighbors.RadiusNeighborsRegressor",
+            "related_models": ["knn-reg", "radius-cls", "kernel-ridge"]
+        }
+    ]
+}

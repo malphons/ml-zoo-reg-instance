@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>k-Nearest Neighbors Regressor — ML Zoo</title>
+    <meta name="description" content="Interactive deep-dive into k-Nearest Neighbors regression with D3.js visualization showing neighbor selection and local averaging.">
+
+    <style>
+        :root {
+            --bg-primary:#0d1117;--bg-secondary:#161b22;--bg-card:#1c2128;
+            --bg-card-hover:#272d36;--bg-input:#21262d;
+            --text-primary:#e6edf3;--text-secondary:#8b949e;--text-muted:#6e7681;
+            --text-link:#58a6ff;--border-default:#30363d;--border-muted:#21262d;
+            --radius-sm:6px;--radius-md:10px;--transition:.2s ease;
+        }
+        :root[data-theme="light"] {
+            --bg-primary:#ffffff;--bg-secondary:#f6f8fa;--bg-card:#ffffff;
+            --bg-card-hover:#f3f4f6;--bg-input:#f6f8fa;
+            --text-primary:#1f2328;--text-secondary:#656d76;--text-muted:#8b949e;
+            --text-link:#0969da;--border-default:#d0d7de;--border-muted:#d8dee4;
+        }
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+             color:var(--text-primary);background:var(--bg-primary);-webkit-font-smoothing:antialiased;
+             line-height:1.6}
+    </style>
+    <link rel="stylesheet" href="../../css/model.css">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="model-page">
+
+        <!-- Navigation -->
+        <nav class="model-nav">
+            <a href="../../../../" class="model-nav__back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Back to ML Zoo
+            </a>
+        </nav>
+
+        <!-- Hero -->
+        <section class="model-hero">
+            <h1 class="model-hero__title">k-Nearest Neighbors Regressor</h1>
+            <div class="model-hero__meta">
+                <span class="model-hero__badge" style="background:#f778ba;color:#fff">Regression</span>
+                <span class="model-hero__badge" style="background:rgba(247,120,186,.15);color:#f778ba">Instance</span>
+                <span class="model-hero__year">Est. 1951</span>
+            </div>
+            <p class="model-hero__desc">
+                Predicts by averaging the target values of the k closest training samples
+                in feature space. A lazy learning algorithm that stores all training data
+                and defers computation until prediction time.
+            </p>
+        </section>
+
+        <!-- Interactive Diagram -->
+        <div class="model-diagram">
+            <div class="model-diagram__controls">
+                <button class="model-diagram__btn" id="btn-toggle-residuals">Show Residuals</button>
+                <button class="model-diagram__btn" onclick="MLZoo.diagram.resetZoom()">Reset View</button>
+            </div>
+            <div id="diagram-container"></div>
+            <div id="diagram-stats" style="padding:8px 0 0;font-size:.78rem;color:var(--text-muted)"></div>
+        </div>
+
+        <!-- Slider: k -->
+        <div class="model-slider" id="slider-k">
+            <span class="model-slider__label">k (neighbors):</span>
+            <input type="range" class="model-slider__input" min="1" max="15" step="1" value="5">
+            <span class="model-slider__value">5</span>
+        </div>
+
+        <!-- Tabs -->
+        <div class="model-tabs">
+            <button class="model-tab-btn model-tab-btn--active" data-tab="overview">Overview</button>
+            <button class="model-tab-btn" data-tab="howto">How It Works</button>
+            <button class="model-tab-btn" data-tab="math">Math</button>
+            <button class="model-tab-btn" data-tab="code">Code</button>
+            <button class="model-tab-btn" data-tab="references">References</button>
+        </div>
+
+        <!-- Tab: Overview -->
+        <div class="model-tab-content model-tab-content--active" id="tab-overview">
+            <div class="model-section">
+                <h2>Overview</h2>
+                <p>
+                    k-Nearest Neighbors (kNN) regression is one of the simplest and most intuitive
+                    machine learning algorithms. Unlike parametric models that learn a fixed set of
+                    parameters during training, kNN is a <strong>lazy learner</strong> &mdash; it
+                    memorizes the entire training set and postpones all computation until a prediction
+                    is requested. When a new query point arrives, kNN finds the k training samples
+                    closest to it (by some distance metric) and returns the average of their target values.
+                </p>
+                <p>
+                    The algorithm makes no assumptions about the underlying data distribution, making
+                    it a <strong>non-parametric</strong> method. This flexibility allows kNN to naturally
+                    capture complex, nonlinear relationships in the data. The choice of k controls the
+                    bias-variance tradeoff: small k values yield flexible but noisy predictions, while
+                    large k values produce smoother but potentially biased results.
+                </p>
+
+                <h3>When to Use</h3>
+                <ul>
+                    <li>The dataset is small to medium-sized (kNN scales poorly with large n)</li>
+                    <li>The relationship between features and target is locally smooth but globally complex</li>
+                    <li>You need a quick baseline with minimal assumptions</li>
+                    <li>Missing value imputation where local structure matters</li>
+                    <li>Recommendation systems based on item or user similarity</li>
+                </ul>
+
+                <h3>Key Characteristics</h3>
+                <ul>
+                    <li><strong>Lazy learning</strong> &mdash; no explicit training phase; all work happens at prediction time</li>
+                    <li><strong>Non-parametric</strong> &mdash; no fixed functional form assumed</li>
+                    <li><strong>Local method</strong> &mdash; predictions depend only on nearby samples</li>
+                    <li><strong>Memory-based</strong> &mdash; entire training set must be stored</li>
+                </ul>
+
+                <div class="model-proscons">
+                    <div class="model-pros">
+                        <h4>Pros</h4>
+                        <ul>
+                            <li>Extremely simple to understand and implement</li>
+                            <li>No training phase required</li>
+                            <li>Naturally handles multi-output regression</li>
+                            <li>Adapts to any underlying function shape</li>
+                            <li>Only one main hyperparameter (k) to tune</li>
+                            <li>Easy to update with new data (just add points)</li>
+                        </ul>
+                    </div>
+                    <div class="model-cons">
+                        <h4>Cons</h4>
+                        <ul>
+                            <li><strong>Curse of dimensionality</strong> &mdash; distances become less meaningful in high dimensions</li>
+                            <li>Slow predictions for large datasets (O(n) per query without indexing)</li>
+                            <li>Requires storing the entire training set in memory</li>
+                            <li>Sensitive to feature scaling &mdash; must normalize features</li>
+                            <li>Sensitive to irrelevant features that distort distance</li>
+                            <li>Cannot extrapolate beyond the range of training data</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: How It Works -->
+        <div class="model-tab-content" id="tab-howto">
+            <div class="model-section">
+                <h2>How It Works</h2>
+                <p>
+                    The kNN regression algorithm proceeds in three conceptually simple steps
+                    at prediction time. There is no separate training phase &mdash; the model
+                    simply stores the training data.
+                </p>
+
+                <h3>Step 1: Compute Distances</h3>
+                <p>
+                    For a new query point $x_q$, compute the distance between $x_q$ and every
+                    training point $x_i$ in the dataset. The most common distance metric is
+                    Euclidean distance, but Manhattan, Minkowski, or custom metrics can also be used.
+                    The choice of distance metric can significantly affect results, especially in
+                    high-dimensional spaces.
+                </p>
+
+                <h3>Step 2: Select k Nearest Neighbors</h3>
+                <p>
+                    Sort all training points by their distance to $x_q$ and select the k closest
+                    ones. These k points form the <em>neighborhood</em> of the query point. In
+                    the interactive diagram above, you can see the neighbor connections drawn as
+                    dashed lines from the query point (orange dot) to its k nearest neighbors.
+                    Adjust the k slider to see how the neighborhood changes.
+                </p>
+
+                <h3>Step 3: Average Target Values</h3>
+                <p>
+                    The prediction is the average (or weighted average) of the target values of
+                    the k nearest neighbors. In the simplest <strong>uniform</strong> weighting
+                    scheme, each neighbor contributes equally. In <strong>distance weighting</strong>,
+                    closer neighbors contribute more, with weight inversely proportional to distance.
+                </p>
+
+                <h3>Uniform vs. Distance Weighting</h3>
+                <p>
+                    With <strong>uniform weighting</strong>, the prediction is a simple arithmetic
+                    mean of the k neighbors' targets. This is equivalent to treating the query point
+                    as being at the center of a flat "window" over the data.
+                </p>
+                <p>
+                    With <strong>distance weighting</strong> (weights = 1/distance), closer neighbors
+                    have a larger influence on the prediction. This often improves accuracy, especially
+                    when the true function varies rapidly. It also reduces the sensitivity to the
+                    exact choice of k.
+                </p>
+
+                <h3>Effect of k on Bias-Variance</h3>
+                <p>
+                    <strong>Small k</strong> (e.g., k=1): The prediction is just the value of the
+                    single nearest neighbor. This captures fine local detail but is highly sensitive
+                    to noise. High variance, low bias.
+                </p>
+                <p>
+                    <strong>Large k</strong> (e.g., k=15): The prediction averages over many neighbors,
+                    producing a very smooth curve. This reduces noise but may miss local patterns.
+                    Low variance, high bias. In the extreme where k=n, every prediction is the global
+                    mean of the training targets.
+                </p>
+
+                <h3>Efficient Neighbor Search</h3>
+                <p>
+                    Naive kNN requires computing distances to all n training points for each query,
+                    giving O(nd) time per prediction (where d is dimensionality). Specialized data
+                    structures can accelerate this:
+                </p>
+                <ul>
+                    <li><strong>KD-Tree</strong> &mdash; partitions space along feature axes; effective for low-dimensional data (d &lt; 20)</li>
+                    <li><strong>Ball Tree</strong> &mdash; partitions space using hyperspheres; works better in moderate dimensions</li>
+                    <li><strong>Approximate methods</strong> (e.g., LSH, FAISS) &mdash; trade exact answers for speed in high dimensions</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Tab: Math -->
+        <div class="model-tab-content" id="tab-math">
+            <div class="model-section">
+                <h2>Key Equations</h2>
+
+                <div class="model-math">
+                    <div class="model-math__label">Euclidean Distance</div>
+                    <p>$$d(x_q, x_i) = \sqrt{\sum_{j=1}^{d} (x_{q,j} - x_{i,j})^2} = \|x_q - x_i\|_2$$</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Manhattan Distance</div>
+                    <p>$$d(x_q, x_i) = \sum_{j=1}^{d} |x_{q,j} - x_{i,j}| = \|x_q - x_i\|_1$$</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Minkowski Distance (general)</div>
+                    <p>$$d_p(x_q, x_i) = \left(\sum_{j=1}^{d} |x_{q,j} - x_{i,j}|^p\right)^{1/p} = \|x_q - x_i\|_p$$</p>
+                    <p>Euclidean distance is the special case p=2; Manhattan is p=1.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">kNN Prediction (Uniform Weights)</div>
+                    <p>$$\hat{y}(x_q) = \frac{1}{k} \sum_{i \in \mathcal{N}_k(x_q)} y_i$$</p>
+                    <p>where $\mathcal{N}_k(x_q)$ is the set of k nearest neighbors of $x_q$.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">kNN Prediction (Distance Weights)</div>
+                    <p>$$\hat{y}(x_q) = \frac{\sum_{i \in \mathcal{N}_k(x_q)} w_i \, y_i}{\sum_{i \in \mathcal{N}_k(x_q)} w_i}, \quad w_i = \frac{1}{d(x_q, x_i)}$$</p>
+                    <p>Closer neighbors receive larger weights, reducing the influence of distant points in the neighborhood.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Bias-Variance Tradeoff with k</div>
+                    <p>As $k$ increases, the model averaging over more neighbors reduces variance
+                    but increases bias. In the limit:</p>
+                    <p>$$k = 1 \implies \hat{y}(x_q) = y_{\text{nearest}} \quad \text{(zero bias, high variance)}$$</p>
+                    <p>$$k = n \implies \hat{y}(x_q) = \bar{y} \quad \text{(high bias, zero variance)}$$</p>
+                    <p>The optimal k minimizes the total expected error, typically found via cross-validation.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Curse of Dimensionality</div>
+                    <p>In $d$ dimensions, the fraction of the data needed to form a local neighborhood
+                    of side length $\ell$ in each dimension is $\ell^d$. For a fixed neighborhood containing
+                    a fraction $r$ of the data, the side length grows as:</p>
+                    <p>$$\ell = r^{1/d}$$</p>
+                    <p>For $r=0.01$ and $d=10$: $\ell = 0.01^{0.1} \approx 0.63$ &mdash; covering 63% of each feature's range.
+                    The neighborhood is no longer "local," rendering distance-based methods ineffective.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Code -->
+        <div class="model-tab-content" id="tab-code">
+            <div class="model-section">
+                <h2>scikit-learn</h2>
+                <div class="model-code">
+                    <div class="model-code__label">Python</div>
+                    <pre><code>from sklearn.neighbors import KNeighborsRegressor
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import mean_squared_error, r2_score
+import numpy as np
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Build pipeline with scaling (critical for kNN)
+pipe = Pipeline([
+    ('scaler', StandardScaler()),
+    ('knn', KNeighborsRegressor(n_neighbors=5, weights='distance'))
+])
+
+# Fit and predict
+pipe.fit(X_train, y_train)
+y_pred = pipe.predict(X_test)
+
+# Evaluate
+print(f"R-squared: {r2_score(y_test, y_pred):.4f}")
+print(f"RMSE:      {np.sqrt(mean_squared_error(y_test, y_pred)):.4f}")
+
+# Hyperparameter tuning
+param_grid = {
+    'knn__n_neighbors': [3, 5, 7, 9, 11, 15],
+    'knn__weights': ['uniform', 'distance'],
+    'knn__metric': ['euclidean', 'manhattan', 'minkowski']
+}
+grid = GridSearchCV(pipe, param_grid, cv=5, scoring='neg_mean_squared_error')
+grid.fit(X_train, y_train)
+print(f"Best params: {grid.best_params_}")
+print(f"Best RMSE:   {np.sqrt(-grid.best_score_):.4f}")</code></pre>
+                </div>
+
+                <h2>From Scratch (NumPy)</h2>
+                <div class="model-code">
+                    <div class="model-code__label">Python</div>
+                    <pre><code>import numpy as np
+
+class KNNRegressor:
+    def __init__(self, k=5, weights='uniform'):
+        self.k = k
+        self.weights = weights
+
+    def fit(self, X, y):
+        self.X_train = np.array(X)
+        self.y_train = np.array(y)
+        return self
+
+    def predict(self, X):
+        X = np.array(X)
+        predictions = []
+        for xq in X:
+            # Compute distances to all training points
+            dists = np.sqrt(np.sum((self.X_train - xq) ** 2, axis=1))
+
+            # Find k nearest neighbor indices
+            k_idx = np.argsort(dists)[:self.k]
+            k_dists = dists[k_idx]
+            k_targets = self.y_train[k_idx]
+
+            if self.weights == 'distance':
+                # Inverse-distance weighting (handle zero distance)
+                w = np.where(k_dists == 0, 1e10, 1.0 / k_dists)
+                pred = np.average(k_targets, weights=w)
+            else:
+                pred = np.mean(k_targets)
+
+            predictions.append(pred)
+        return np.array(predictions)
+
+# Usage
+model = KNNRegressor(k=5, weights='distance')
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
+print(f"RMSE: {rmse:.4f}")</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: References -->
+        <div class="model-tab-content" id="tab-references">
+            <div class="model-section">
+                <h2>Key References</h2>
+                <ul>
+                    <li>Fix, E. & Hodges, J. L. (1951). <em>Discriminatory Analysis &mdash; Nonparametric Discrimination: Consistency Properties</em>. USAF School of Aviation Medicine, Technical Report 4.</li>
+                    <li>Cover, T. & Hart, P. (1967). <em>Nearest Neighbor Pattern Classification</em>. IEEE Transactions on Information Theory, 13(1), 21&ndash;27.</li>
+                    <li>Hastie, T., Tibshirani, R. & Friedman, J. <em>The Elements of Statistical Learning</em>, 2nd ed., Chapter 13: Prototype Methods and Nearest-Neighbors.</li>
+                    <li>Altman, N. S. (1992). <em>An Introduction to Kernel and Nearest-Neighbor Nonparametric Regression</em>. The American Statistician, 46(3), 175&ndash;185.</li>
+                </ul>
+
+                <h3>Related Models</h3>
+                <div class="model-related">
+                    <a href="../radius-reg/" class="model-related__link">Radius Neighbors Regressor</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/data.js"></script>
+    <script src="../../js/shared-diagram.js"></script>
+
+    <script>
+    (function () {
+        // Theme from localStorage
+        var t = localStorage.getItem('mlzoo_theme');
+        if (t) document.documentElement.setAttribute('data-theme', t);
+
+        // Tab switching
+        document.querySelectorAll('.model-tab-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.model-tab-btn').forEach(function (b) {
+                    b.classList.remove('model-tab-btn--active');
+                });
+                document.querySelectorAll('.model-tab-content').forEach(function (c) {
+                    c.classList.remove('model-tab-content--active');
+                });
+                btn.classList.add('model-tab-btn--active');
+                var tab = document.getElementById('tab-' + btn.getAttribute('data-tab'));
+                if (tab) tab.classList.add('model-tab-content--active');
+            });
+        });
+
+        // KaTeX auto-render
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof renderMathInElement !== 'undefined') {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false }
+                    ]
+                });
+            }
+        });
+
+        // Init diagram
+        var data = window.MLZoo.modelData;
+        var diagram = MLZoo.diagram;
+        diagram.init('#diagram-container', data.config);
+        diagram.drawPoints(data.points);
+
+        // Current state
+        var currentK = data.defaultK;
+        var queryX = data.defaultQueryX;
+
+        // Draw initial state
+        function updateDiagram() {
+            // Draw prediction curve for current k
+            var curveKey = currentK;
+            var curve = data.predictionCurves[curveKey];
+            if (!curve) {
+                // Generate on the fly for non-precomputed k
+                curve = [];
+                for (var s = 0; s <= 120; s++) {
+                    var xq = 0.3 + (s / 120) * 9.4;
+                    var yq = data.knnPredict(xq, currentK);
+                    curve.push({ x: Math.round(xq * 100) / 100, y: Math.round(yq * 100) / 100 });
+                }
+            }
+            diagram.drawCurve(curve, { color: '#f778ba', width: 2.5 });
+
+            // Get neighbors for current query point
+            var neighbors = data.getNeighbors(queryX, currentK);
+            var prediction = data.knnPredict(queryX, currentK);
+
+            // Get neighbor indices for highlighting
+            var neighborIndices = neighbors.map(function (n) { return n.idx; });
+            diagram.highlightNeighbors(neighborIndices, { color: '#ffa657', radius: 7 });
+
+            // Draw neighbor links
+            diagram.drawNeighborLinks(queryX, prediction, neighbors, {
+                color: '#ffa657', width: 1, opacity: 0.4
+            });
+
+            // Draw query point
+            diagram.drawQueryPoint(queryX, prediction, {
+                color: '#ffa657',
+                radius: 8,
+                label: 'query (k=' + currentK + ')',
+                onDrag: function (newX, newY) {
+                    queryX = newX;
+                    updateDiagram();
+                }
+            });
+
+            // Update stats
+            var statsEl = document.getElementById('diagram-stats');
+            if (statsEl) {
+                var maxDist = neighbors.length > 0 ? neighbors[neighbors.length - 1].d : 0;
+                statsEl.innerHTML =
+                    'k = ' + currentK +
+                    ' &nbsp;|&nbsp; Query x = ' + queryX.toFixed(2) +
+                    ' &nbsp;|&nbsp; Prediction = ' + prediction.toFixed(2) +
+                    ' &nbsp;|&nbsp; Max neighbor dist = ' + maxDist.toFixed(2) +
+                    ' &nbsp;|&nbsp; n = ' + data.stats.n;
+            }
+        }
+
+        updateDiagram();
+
+        // k slider
+        var sliderK = document.querySelector('#slider-k .model-slider__input');
+        var sliderKValue = document.querySelector('#slider-k .model-slider__value');
+        sliderK.addEventListener('input', function () {
+            currentK = parseInt(this.value);
+            sliderKValue.textContent = currentK;
+            updateDiagram();
+        });
+
+        // Toggle residuals
+        var showResiduals = false;
+        document.getElementById('btn-toggle-residuals').addEventListener('click', function () {
+            showResiduals = !showResiduals;
+            this.textContent = showResiduals ? 'Hide Residuals' : 'Show Residuals';
+            if (showResiduals) {
+                diagram.drawResiduals(data.points, function (x) {
+                    return data.knnPredict(x, currentK);
+                });
+            } else {
+                d3.selectAll('.residual-line').remove();
+            }
+        });
+    })();
+    </script>
+</body>
+</html>

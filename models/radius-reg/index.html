@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radius Neighbors Regressor — ML Zoo</title>
+    <meta name="description" content="Interactive deep-dive into Radius Neighbors regression with D3.js visualization showing radius-based neighbor selection and density-aware prediction.">
+
+    <style>
+        :root {
+            --bg-primary:#0d1117;--bg-secondary:#161b22;--bg-card:#1c2128;
+            --bg-card-hover:#272d36;--bg-input:#21262d;
+            --text-primary:#e6edf3;--text-secondary:#8b949e;--text-muted:#6e7681;
+            --text-link:#58a6ff;--border-default:#30363d;--border-muted:#21262d;
+            --radius-sm:6px;--radius-md:10px;--transition:.2s ease;
+        }
+        :root[data-theme="light"] {
+            --bg-primary:#ffffff;--bg-secondary:#f6f8fa;--bg-card:#ffffff;
+            --bg-card-hover:#f3f4f6;--bg-input:#f6f8fa;
+            --text-primary:#1f2328;--text-secondary:#656d76;--text-muted:#8b949e;
+            --text-link:#0969da;--border-default:#d0d7de;--border-muted:#d8dee4;
+        }
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+             color:var(--text-primary);background:var(--bg-primary);-webkit-font-smoothing:antialiased;
+             line-height:1.6}
+    </style>
+    <link rel="stylesheet" href="../../css/model.css">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="model-page">
+
+        <!-- Navigation -->
+        <nav class="model-nav">
+            <a href="../../../../" class="model-nav__back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Back to ML Zoo
+            </a>
+        </nav>
+
+        <!-- Hero -->
+        <section class="model-hero">
+            <h1 class="model-hero__title">Radius Neighbors Regressor</h1>
+            <div class="model-hero__meta">
+                <span class="model-hero__badge" style="background:#f778ba;color:#fff">Regression</span>
+                <span class="model-hero__badge" style="background:rgba(247,120,186,.15);color:#f778ba">Instance</span>
+                <span class="model-hero__year">Est. 1951</span>
+            </div>
+            <p class="model-hero__desc">
+                Averages target values of all training samples within a fixed radius of the query point.
+                Unlike kNN which fixes the number of neighbors, radius-based search adapts to local
+                data density &mdash; using more neighbors in dense regions and fewer in sparse ones.
+            </p>
+        </section>
+
+        <!-- Interactive Diagram -->
+        <div class="model-diagram">
+            <div class="model-diagram__controls">
+                <button class="model-diagram__btn" id="btn-toggle-residuals">Show Residuals</button>
+                <button class="model-diagram__btn" onclick="MLZoo.diagram.resetZoom()">Reset View</button>
+            </div>
+            <div id="diagram-container"></div>
+            <div id="diagram-stats" style="padding:8px 0 0;font-size:.78rem;color:var(--text-muted)"></div>
+        </div>
+
+        <!-- Slider: Radius -->
+        <div class="model-slider" id="slider-radius">
+            <span class="model-slider__label">Radius:</span>
+            <input type="range" class="model-slider__input" min="0.5" max="3.0" step="0.1" value="1.5">
+            <span class="model-slider__value">1.5</span>
+        </div>
+
+        <!-- Tabs -->
+        <div class="model-tabs">
+            <button class="model-tab-btn model-tab-btn--active" data-tab="overview">Overview</button>
+            <button class="model-tab-btn" data-tab="howto">How It Works</button>
+            <button class="model-tab-btn" data-tab="math">Math</button>
+            <button class="model-tab-btn" data-tab="code">Code</button>
+            <button class="model-tab-btn" data-tab="references">References</button>
+        </div>
+
+        <!-- Tab: Overview -->
+        <div class="model-tab-content model-tab-content--active" id="tab-overview">
+            <div class="model-section">
+                <h2>Overview</h2>
+                <p>
+                    The Radius Neighbors Regressor is a variant of nearest-neighbor regression that
+                    selects neighbors based on a <strong>fixed distance threshold</strong> (radius)
+                    rather than a fixed count (k). Given a query point, the algorithm finds all
+                    training samples whose distance to the query is less than or equal to the
+                    specified radius, then averages their target values to form a prediction.
+                </p>
+                <p>
+                    This approach has a key advantage over kNN: the number of neighbors <strong>adapts
+                    to the local density</strong> of the data. In densely sampled regions, many points
+                    fall within the radius, producing well-supported predictions. In sparse regions,
+                    fewer points are included, and if no training samples lie within the radius, the
+                    algorithm can either raise an error or fall back to a default prediction &mdash;
+                    signaling that the query is in uncharted territory.
+                </p>
+                <p>
+                    This density-adaptive behavior makes the radius approach particularly useful for
+                    datasets where the sampling density varies significantly across the feature space,
+                    such as spatial data, sensor networks, or any domain where some regions have
+                    abundant measurements while others are sparsely covered.
+                </p>
+
+                <h3>When to Use</h3>
+                <ul>
+                    <li>Data has <strong>varying density</strong> across the feature space</li>
+                    <li>You want predictions to reflect local confidence (more neighbors = more reliable)</li>
+                    <li>Spatial or geographic data where physical distance is meaningful</li>
+                    <li>You need to detect and flag query points that fall outside the training distribution</li>
+                    <li>Anomaly-aware prediction where sparse-region queries should be flagged</li>
+                </ul>
+
+                <h3>Key Characteristics</h3>
+                <ul>
+                    <li><strong>Density-adaptive</strong> &mdash; number of neighbors varies with local data density</li>
+                    <li><strong>Lazy learning</strong> &mdash; no training phase, computation deferred to prediction time</li>
+                    <li><strong>Non-parametric</strong> &mdash; no fixed model structure assumed</li>
+                    <li><strong>Outlier-sensitive</strong> &mdash; can produce no prediction if no neighbors exist within radius</li>
+                </ul>
+
+                <div class="model-proscons">
+                    <div class="model-pros">
+                        <h4>Pros</h4>
+                        <ul>
+                            <li>Naturally adapts to local data density</li>
+                            <li>Can flag low-confidence predictions (few or no neighbors)</li>
+                            <li>Simple to understand and implement</li>
+                            <li>No assumption about underlying function form</li>
+                            <li>Meaningful when distance has physical interpretation</li>
+                            <li>Robust when data density is highly non-uniform</li>
+                        </ul>
+                    </div>
+                    <div class="model-cons">
+                        <h4>Cons</h4>
+                        <ul>
+                            <li>Can fail to predict if no neighbors are within radius</li>
+                            <li>Radius choice is not intuitive &mdash; depends on data scale</li>
+                            <li>Same curse of dimensionality as kNN in high dimensions</li>
+                            <li>Requires careful feature scaling to make radius meaningful</li>
+                            <li>Prediction time is O(n) without spatial indexing</li>
+                            <li>Predictions can be unstable at density boundaries</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: How It Works -->
+        <div class="model-tab-content" id="tab-howto">
+            <div class="model-section">
+                <h2>How It Works</h2>
+                <p>
+                    Like kNN, the Radius Neighbors Regressor is a lazy learner that stores all
+                    training data and computes predictions on demand. The key difference is in
+                    how the neighborhood is defined.
+                </p>
+
+                <h3>Step 1: Define the Radius</h3>
+                <p>
+                    The user specifies a fixed radius $r > 0$ that defines a hypersphere in
+                    feature space. This radius determines the "reach" of each prediction. In
+                    the interactive diagram above, the radius is shown as a dashed circle
+                    centered on the query point. Adjust the radius slider to see how the
+                    neighborhood expands or contracts.
+                </p>
+
+                <h3>Step 2: Find All Neighbors Within Radius</h3>
+                <p>
+                    For a query point $x_q$, the algorithm identifies all training points $x_i$
+                    such that $d(x_q, x_i) \leq r$. The number of neighbors is not fixed &mdash;
+                    it depends on how many training points happen to lie within that ball. In
+                    dense regions this could be dozens of points; in sparse regions it could be
+                    zero.
+                </p>
+
+                <h3>Step 3: Average (or Weighted Average)</h3>
+                <p>
+                    If at least one neighbor is found, the prediction is the average of their
+                    target values. As with kNN, distance weighting can be applied so that
+                    closer neighbors contribute more. If <strong>no neighbors</strong> fall
+                    within the radius, sklearn raises a <code>ValueError</code> by default,
+                    though you can set <code>outlier_label</code> or handle the exception.
+                </p>
+
+                <h3>Comparison with kNN</h3>
+                <p>
+                    <strong>kNN</strong> always uses exactly k neighbors, regardless of how
+                    far away they are. In sparse regions, these neighbors may be very distant,
+                    leading to poor predictions based on irrelevant data. In dense regions,
+                    it ignores potentially useful nearby points beyond the k-th.
+                </p>
+                <p>
+                    <strong>Radius Neighbors</strong> uses a fixed distance threshold, so it
+                    naturally includes more neighbors where data is dense and fewer where it
+                    is sparse. However, it requires the user to choose a meaningful radius,
+                    which depends on the scale of the features and the density of the data.
+                </p>
+
+                <h3>Choosing the Radius</h3>
+                <p>
+                    Selecting an appropriate radius is the main challenge. Strategies include:
+                </p>
+                <ul>
+                    <li><strong>Cross-validation</strong> &mdash; try multiple radius values and pick the one with lowest validation error</li>
+                    <li><strong>Data-driven heuristics</strong> &mdash; set the radius to the median distance to the k-th nearest neighbor across all training points</li>
+                    <li><strong>Domain knowledge</strong> &mdash; in spatial applications, the radius might correspond to a physically meaningful distance (e.g., 5km for weather stations)</li>
+                </ul>
+
+                <h3>Handling Empty Neighborhoods</h3>
+                <p>
+                    When no training points fall within the radius, several strategies are possible:
+                </p>
+                <ul>
+                    <li>Raise an error (sklearn default) to alert the user of an out-of-distribution query</li>
+                    <li>Return a default value (e.g., the global training mean)</li>
+                    <li>Expand the radius dynamically until at least one neighbor is found</li>
+                    <li>Return NaN to flag the prediction as unreliable for downstream processing</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Tab: Math -->
+        <div class="model-tab-content" id="tab-math">
+            <div class="model-section">
+                <h2>Key Equations</h2>
+
+                <div class="model-math">
+                    <div class="model-math__label">Neighborhood Definition</div>
+                    <p>$$\mathcal{N}_r(x_q) = \{x_i \in \mathcal{X} : d(x_q, x_i) \leq r\}$$</p>
+                    <p>The set of all training points within distance $r$ of the query point $x_q$.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Radius Neighbors Prediction (Uniform Weights)</div>
+                    <p>$$\hat{y}(x_q) = \frac{1}{|\mathcal{N}_r(x_q)|} \sum_{i \in \mathcal{N}_r(x_q)} y_i$$</p>
+                    <p>The simple average of all target values within the radius. Requires $|\mathcal{N}_r(x_q)| \geq 1$.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Radius Neighbors Prediction (Distance Weights)</div>
+                    <p>$$\hat{y}(x_q) = \frac{\sum_{i \in \mathcal{N}_r(x_q)} w_i \, y_i}{\sum_{i \in \mathcal{N}_r(x_q)} w_i}, \quad w_i = \frac{1}{d(x_q, x_i)}$$</p>
+                    <p>Distance-weighted average where closer neighbors have a proportionally larger influence on the prediction.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Connection to Kernel Density Estimation</div>
+                    <p>The uniform-weight radius neighbors predictor is equivalent to a Nadaraya-Watson
+                    estimator with a <strong>box kernel</strong> of bandwidth $r$:</p>
+                    <p>$$K_r(u) = \begin{cases} 1 & \text{if } |u| \leq r \\ 0 & \text{otherwise} \end{cases}$$</p>
+                    <p>$$\hat{y}(x_q) = \frac{\sum_{i=1}^n K_r(d(x_q, x_i)) \, y_i}{\sum_{i=1}^n K_r(d(x_q, x_i))}$$</p>
+                    <p>This reveals that radius neighbors regression is a special case of kernel regression
+                    with a hard cutoff kernel.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Effective Number of Neighbors</div>
+                    <p>Unlike kNN where $k$ is fixed, the effective number of neighbors varies by location:</p>
+                    <p>$$k_{\text{eff}}(x_q) = |\mathcal{N}_r(x_q)| = \sum_{i=1}^n \mathbf{1}[d(x_q, x_i) \leq r]$$</p>
+                    <p>This quantity is closely related to the local density estimate:
+                    $\hat{f}(x_q) \propto k_{\text{eff}}(x_q) / (r^d \cdot n)$ where $d$ is the dimensionality.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Radius Selection via Cross-Validation</div>
+                    <p>The optimal radius minimizes the cross-validated prediction error:</p>
+                    <p>$$r^* = \arg\min_r \frac{1}{n} \sum_{i=1}^n \left(y_i - \hat{y}_{-i}(x_i; r)\right)^2$$</p>
+                    <p>where $\hat{y}_{-i}(x_i; r)$ is the leave-one-out prediction for $x_i$ using radius $r$.
+                    Too small a radius yields high variance (few neighbors); too large a radius yields
+                    high bias (over-smoothing).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Code -->
+        <div class="model-tab-content" id="tab-code">
+            <div class="model-section">
+                <h2>scikit-learn</h2>
+                <div class="model-code">
+                    <div class="model-code__label">Python</div>
+                    <pre><code>from sklearn.neighbors import RadiusNeighborsRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import mean_squared_error, r2_score
+import numpy as np
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Build pipeline with scaling (critical: radius is distance-based)
+pipe = Pipeline([
+    ('scaler', StandardScaler()),
+    ('rnr', RadiusNeighborsRegressor(
+        radius=1.0,
+        weights='distance'
+    ))
+])
+
+# Fit and predict
+pipe.fit(X_train, y_train)
+y_pred = pipe.predict(X_test)
+
+# Evaluate
+print(f"R-squared: {r2_score(y_test, y_pred):.4f}")
+print(f"RMSE:      {np.sqrt(mean_squared_error(y_test, y_pred)):.4f}")
+
+# Manual radius search (RadiusNeighborsRegressor can fail
+# if no neighbors exist, so wrap in try/except)
+best_r, best_rmse = None, float('inf')
+for r in np.arange(0.5, 3.1, 0.1):
+    try:
+        pipe.set_params(rnr__radius=r)
+        pipe.fit(X_train, y_train)
+        yp = pipe.predict(X_test)
+        rmse = np.sqrt(mean_squared_error(y_test, yp))
+        if rmse < best_rmse:
+            best_r, best_rmse = r, rmse
+    except ValueError:
+        # No neighbors found for some test point
+        continue
+
+print(f"Best radius: {best_r:.1f}")
+print(f"Best RMSE:   {best_rmse:.4f}")</code></pre>
+                </div>
+
+                <h2>From Scratch (NumPy)</h2>
+                <div class="model-code">
+                    <div class="model-code__label">Python</div>
+                    <pre><code>import numpy as np
+
+class RadiusNeighborsReg:
+    def __init__(self, radius=1.0, weights='uniform'):
+        self.radius = radius
+        self.weights = weights
+
+    def fit(self, X, y):
+        self.X_train = np.array(X)
+        self.y_train = np.array(y)
+        return self
+
+    def predict(self, X):
+        X = np.array(X)
+        predictions = []
+        for xq in X:
+            # Compute distances to all training points
+            dists = np.sqrt(np.sum((self.X_train - xq) ** 2, axis=1))
+
+            # Find all neighbors within radius
+            mask = dists <= self.radius
+            if not np.any(mask):
+                raise ValueError(
+                    f"No neighbors within radius {self.radius} "
+                    f"for query {xq}"
+                )
+
+            r_dists = dists[mask]
+            r_targets = self.y_train[mask]
+
+            if self.weights == 'distance':
+                w = np.where(r_dists == 0, 1e10, 1.0 / r_dists)
+                pred = np.average(r_targets, weights=w)
+            else:
+                pred = np.mean(r_targets)
+
+            predictions.append(pred)
+        return np.array(predictions)
+
+# Usage
+model = RadiusNeighborsReg(radius=1.0, weights='distance')
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
+print(f"RMSE: {rmse:.4f}")</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: References -->
+        <div class="model-tab-content" id="tab-references">
+            <div class="model-section">
+                <h2>Key References</h2>
+                <ul>
+                    <li>Fix, E. & Hodges, J. L. (1951). <em>Discriminatory Analysis &mdash; Nonparametric Discrimination: Consistency Properties</em>. USAF School of Aviation Medicine, Technical Report 4.</li>
+                    <li>Nadaraya, E. A. (1964). <em>On Estimating Regression</em>. Theory of Probability and Its Applications, 9(1), 141&ndash;142.</li>
+                    <li>Watson, G. S. (1964). <em>Smooth Regression Analysis</em>. Sankhya: The Indian Journal of Statistics, Series A, 26(4), 359&ndash;372.</li>
+                    <li>Hastie, T., Tibshirani, R. & Friedman, J. <em>The Elements of Statistical Learning</em>, 2nd ed., Chapters 2.3 and 6.1: Local Methods and Kernel Smoothing.</li>
+                </ul>
+
+                <h3>Related Models</h3>
+                <div class="model-related">
+                    <a href="../knn-reg/" class="model-related__link">k-Nearest Neighbors Regressor</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/data.js"></script>
+    <script src="../../js/shared-diagram.js"></script>
+
+    <script>
+    (function () {
+        // Theme from localStorage
+        var t = localStorage.getItem('mlzoo_theme');
+        if (t) document.documentElement.setAttribute('data-theme', t);
+
+        // Tab switching
+        document.querySelectorAll('.model-tab-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.model-tab-btn').forEach(function (b) {
+                    b.classList.remove('model-tab-btn--active');
+                });
+                document.querySelectorAll('.model-tab-content').forEach(function (c) {
+                    c.classList.remove('model-tab-content--active');
+                });
+                btn.classList.add('model-tab-btn--active');
+                var tab = document.getElementById('tab-' + btn.getAttribute('data-tab'));
+                if (tab) tab.classList.add('model-tab-content--active');
+            });
+        });
+
+        // KaTeX auto-render
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof renderMathInElement !== 'undefined') {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false }
+                    ]
+                });
+            }
+        });
+
+        // Init diagram
+        var data = window.MLZoo.modelData;
+        var diagram = MLZoo.diagram;
+        diagram.init('#diagram-container', data.config);
+        diagram.drawPoints(data.points);
+
+        // Current state
+        var currentRadius = data.defaultRadius;
+        var queryX = data.defaultQueryX;
+
+        // Draw initial state
+        function updateDiagram() {
+            // Build prediction curve for current radius (skip nulls / gaps)
+            var curveKey = Math.round(currentRadius * 10) / 10;
+            var rawCurve = data.predictionCurves[curveKey];
+            var curve;
+
+            if (rawCurve) {
+                // Filter out null entries (gaps where no neighbors exist)
+                curve = rawCurve.filter(function (pt) { return pt.y !== null; });
+            } else {
+                // Generate on the fly for non-precomputed radius
+                curve = [];
+                for (var s = 0; s <= 120; s++) {
+                    var xq = 0.3 + (s / 120) * 9.4;
+                    var yq = data.radiusPredict(xq, currentRadius);
+                    if (yq !== null) {
+                        curve.push({ x: Math.round(xq * 100) / 100, y: Math.round(yq * 100) / 100 });
+                    }
+                }
+            }
+
+            if (curve.length > 0) {
+                diagram.drawCurve(curve, { color: '#f778ba', width: 2.5 });
+            }
+
+            // Get neighbors for current query point
+            var neighbors = data.getRadiusNeighbors(queryX, currentRadius);
+            var prediction = data.radiusPredict(queryX, currentRadius);
+            var predY = prediction !== null ? prediction : 5; // Fallback for display
+
+            // Get neighbor indices for highlighting
+            var neighborIndices = neighbors.map(function (n) { return n.idx; });
+            diagram.highlightNeighbors(neighborIndices, { color: '#ffa657', radius: 7 });
+
+            // Draw the radius circle around query point
+            diagram.drawNeighborhood(queryX, predY, currentRadius, {
+                fillColor: 'rgba(247,120,186,0.06)',
+                strokeColor: '#f778ba',
+                strokeWidth: 1.5,
+                dashArray: '6 3',
+                opacity: 0.7
+            });
+
+            // Draw neighbor links
+            if (neighbors.length > 0) {
+                diagram.drawNeighborLinks(queryX, predY, neighbors, {
+                    color: '#ffa657', width: 1, opacity: 0.4
+                });
+            }
+
+            // Draw query point
+            var queryLabel = prediction !== null
+                ? 'query (r=' + currentRadius.toFixed(1) + ', n=' + neighbors.length + ')'
+                : 'query (no neighbors!)';
+
+            diagram.drawQueryPoint(queryX, predY, {
+                color: prediction !== null ? '#ffa657' : '#f85149',
+                radius: 8,
+                label: queryLabel,
+                onDrag: function (newX, newY) {
+                    queryX = newX;
+                    updateDiagram();
+                }
+            });
+
+            // Update stats
+            var statsEl = document.getElementById('diagram-stats');
+            if (statsEl) {
+                var predStr = prediction !== null ? prediction.toFixed(2) : 'N/A (no neighbors)';
+                statsEl.innerHTML =
+                    'Radius = ' + currentRadius.toFixed(1) +
+                    ' &nbsp;|&nbsp; Query x = ' + queryX.toFixed(2) +
+                    ' &nbsp;|&nbsp; Prediction = ' + predStr +
+                    ' &nbsp;|&nbsp; Neighbors found = ' + neighbors.length +
+                    ' &nbsp;|&nbsp; n = ' + data.stats.n;
+            }
+        }
+
+        updateDiagram();
+
+        // Radius slider
+        var sliderR = document.querySelector('#slider-radius .model-slider__input');
+        var sliderRValue = document.querySelector('#slider-radius .model-slider__value');
+        sliderR.addEventListener('input', function () {
+            currentRadius = parseFloat(this.value);
+            sliderRValue.textContent = currentRadius.toFixed(1);
+            updateDiagram();
+        });
+
+        // Toggle residuals
+        var showResiduals = false;
+        document.getElementById('btn-toggle-residuals').addEventListener('click', function () {
+            showResiduals = !showResiduals;
+            this.textContent = showResiduals ? 'Hide Residuals' : 'Show Residuals';
+            if (showResiduals) {
+                diagram.drawResiduals(data.points, function (x) {
+                    var pred = data.radiusPredict(x, currentRadius);
+                    return pred !== null ? pred : 0;
+                });
+            } else {
+                d3.selectAll('.residual-line').remove();
+            }
+        });
+    })();
+    </script>
+</body>
+</html>
